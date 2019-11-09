@@ -1,6 +1,6 @@
 use bytes::{Bytes, Buf, BufMut};
 use std::io::Cursor;
-use ring::{digest, signature};
+use ring::{digest, signature::{self, VerificationAlgorithm}};
 use untrusted::Input;
 
 use crate::util::*;
@@ -44,7 +44,7 @@ pub fn parse_sign_response(app_id: String, client_data: Vec<u8>, public_key: Vec
     let input_public_key = Input::from(&public_key[..]);
 
     // The signature is to be verified by the relying party using the public key obtained during registration.
-    let _ = signature::verify(&signature::ECDSA_P256_SHA256_ASN1, input_public_key, input_msg, input_sig);
+    let _ = signature::ECDSA_P256_SHA256_ASN1.verify(input_public_key, input_msg, input_sig);
 
     let authorization = Authorization {
         counter: get_counter(counter),

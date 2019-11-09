@@ -1,6 +1,5 @@
 use bytes::{Bytes, BufMut};
 use ring::{digest};
-use untrusted::Input;
 use byteorder::{ByteOrder, BigEndian};
 use webpki::{SignatureAlgorithm, trust_anchor_util, EndEntityCert, ECDSA_P256_SHA256};
 
@@ -46,7 +45,7 @@ pub fn parse_registration(app_id: String, client_data: Vec<u8>, registration_dat
     let attestation_certificate = mem.split_to(cert_len);
 
     // Check certificate as trust anchor
-    trust_anchor_util::cert_der_as_trust_anchor(Input::from(&attestation_certificate[..]))
+    trust_anchor_util::cert_der_as_trust_anchor(&attestation_certificate[..])
       .map_err(|_e| U2fError::NotTrustedAnchor)?;
 
     // Remaining data corresponds to the signature 
@@ -62,16 +61,13 @@ pub fn parse_registration(app_id: String, client_data: Vec<u8>, registration_dat
     msg.put(key_handle.clone()); 
     msg.put(public_key.clone()); 
 
-    let input_sig = Input::from(&signature[..]);
-    let input_msg = Input::from(&msg[..]);
-
     // The signature is to be verified by the relying party using the public key certified
     // in the attestation certificate.
-    let cert = EndEntityCert::from(Input::from(&attestation_certificate[..]))
+    let cert = EndEntityCert::from(&attestation_certificate[..])
         .map_err(|_e| U2fError::BadCertificate)?;
 
     let algo : &[&SignatureAlgorithm] = &[&ECDSA_P256_SHA256];
-    cert.verify_signature(algo[0], input_msg, input_sig).map_err(|_e| U2fError::BadSignature)?;
+    cert.verify_signature(algo[0], &msg[..], &signature[..]).map_err(|_e| U2fError::BadSignature)?;
 
     let registration = Registration {
         key_handle: key_handle[..].to_vec(),
